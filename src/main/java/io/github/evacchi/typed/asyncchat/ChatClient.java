@@ -51,10 +51,10 @@ public interface ChatClient {
         var userName = args[0];
 
         var channel = Channels.Socket.open();
-        Address<ClientProtocol> client = system.actorOf(self -> msg -> clientConnecting(self, msg));
-        channel.connect(HOST, PORT)
-                .thenAccept(skt -> client.tell(new ClientConnection(skt)))
-                .exceptionally(err -> { err.printStackTrace(); return null; });
+        Address<ClientProtocol> client = system.actorOf(self -> clientConnecting(self, channel));
+        // channel.connect(HOST, PORT)
+        //         .thenAccept(skt -> client.tell(new ClientConnection(skt)))
+        //         .exceptionally(err -> { err.printStackTrace(); return null; });
 
         out.printf("Login...............%s\n", userName);
 
@@ -65,6 +65,16 @@ public interface ChatClient {
                 client.tell(new Message(userName, line));
             }
         }
+    }
+
+    static Behavior<ClientProtocol> clientConnecting(Address<ClientProtocol> self, Channels.Socket channel) {
+        channel.connect(HOST, PORT)
+            .thenAccept(skt -> self.tell(new ClientConnection(skt)))
+            .exceptionally(err -> { err.printStackTrace(); return null; });
+
+        // self.tell(new ClientConnection(null));
+
+        return msg -> clientConnecting(self, msg);
     }
 
     static Effect<ClientProtocol> clientConnecting(Address<ClientProtocol> self, ClientProtocol msg) {
